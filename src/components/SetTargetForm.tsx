@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,17 +9,11 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-
-interface WishlistItemData {
-  image: string;
-  name: string;
-  price: number;
-  saved: number;
-}
+import { WishlistItemData } from '@/contexts/WishlistContext';
 
 interface SetTargetFormProps {
   onClose: () => void;
-  onSave?: (item: WishlistItemData) => void;
+  onSave?: (item: Omit<WishlistItemData, 'id' | 'dateCreated' | 'completed'>) => void;
 }
 
 const categories = [

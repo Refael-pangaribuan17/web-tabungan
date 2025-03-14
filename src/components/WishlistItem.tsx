@@ -8,36 +8,31 @@ import { Input } from './ui/input';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { useWishlist } from '@/contexts/WishlistContext';
 
 // Example placeholder image
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=500&auto=format&fit=crop';
 
-interface WishlistItemProps {
-  initialImage?: string;
-  initialName?: string;
-  initialPrice?: number;
-  initialSaved?: number;
-}
-
-const WishlistItem: React.FC<WishlistItemProps> = ({
-  initialImage = PLACEHOLDER_IMAGE,
-  initialName = 'Laptop Baru',
-  initialPrice = 10000000,
-  initialSaved = 2500000,
-}) => {
-  const [itemImage, setItemImage] = useState(initialImage);
-  const [itemName, setItemName] = useState(initialName);
-  const [itemPrice, setItemPrice] = useState(initialPrice);
-  const [savedAmount, setSavedAmount] = useState(initialSaved);
+const WishlistItem: React.FC = () => {
+  const { getCurrentWishlist, updateWishlist, resetSavings, addSavings, currentWishlistId } = useWishlist();
+  const currentWishlist = getCurrentWishlist();
+  
   const [depositAmount, setDepositAmount] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
-  // Get current date for saving to calendar
-  const currentDate = new Date();
-  const day = currentDate.getDate();
-  const month = currentDate.getMonth();
-  const year = currentDate.getFullYear();
+  if (!currentWishlist || !currentWishlistId) {
+    return (
+      <div className="wishlist-card p-4 relative">
+        <div className="wave-background"></div>
+        <div className="relative z-10 flex items-center justify-center h-44">
+          <p className="text-gray-500 dark:text-gray-400">Tidak ada wishlist yang dipilih</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const { image, name, price, saved } = currentWishlist;
 
   const handleAddSavings = () => {
     const amount = parseInt(depositAmount);
@@ -50,24 +45,9 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
       return;
     }
 
-    setSavedAmount(prev => prev + amount);
+    addSavings(currentWishlistId, amount);
     setDepositAmount('');
     setIsDialogOpen(false);
-    
-    // Dispatch an event to update the calendar and checklist
-    window.dispatchEvent(new CustomEvent('savingsAdded', {
-      detail: {
-        date: day,
-        month: month,
-        year: year,
-        amount: amount
-      }
-    }));
-    
-    toast({
-      title: "Tabungan Berhasil Ditambahkan!",
-      description: `Rp ${amount.toLocaleString('id-ID')} telah ditambahkan ke tabunganmu.`,
-    });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,23 +57,15 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
-        setItemImage(event.target.result.toString());
+        updateWishlist(currentWishlistId, { image: event.target.result.toString() });
       }
     };
     reader.readAsDataURL(file);
   };
 
   const handleResetSavings = () => {
-    setSavedAmount(0);
+    resetSavings(currentWishlistId);
     setIsResetDialogOpen(false);
-    
-    // Dispatch an event to reset calendar and checklist
-    window.dispatchEvent(new CustomEvent('savingsReset'));
-    
-    toast({
-      title: "Tabungan Direset",
-      description: "Tabunganmu telah direset menjadi 0.",
-    });
   };
 
   return (
@@ -102,7 +74,7 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-wishlist-dark dark:text-white">{itemName}</h3>
+          <h3 className="text-xl font-bold text-wishlist-dark dark:text-white">{name}</h3>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -123,8 +95,8 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
           <div className="relative group">
             <div className="overflow-hidden rounded-xl relative">
               <img 
-                src={itemImage} 
-                alt={itemName}
+                src={image} 
+                alt={name}
                 className="w-52 h-44 object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
               />
               <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity"></div>
@@ -141,12 +113,12 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
           </div>
           
           <div className="flex flex-col items-center">
-            <CircularProgress value={savedAmount} max={itemPrice} animated={true} />
+            <CircularProgress value={saved} max={price} animated={true} />
             <div className="mt-4 text-center relative">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Tabungan saat ini</p>
               <div className="flex items-center justify-center">
                 <p className="text-lg font-bold text-wishlist-primary">
-                  {formatCurrency(savedAmount)} <span className="text-gray-400 font-normal">dari</span> {formatCurrency(itemPrice)}
+                  {formatCurrency(saved)} <span className="text-gray-400 font-normal">dari</span> {formatCurrency(price)}
                 </p>
                 <Button 
                   variant="ghost" 
