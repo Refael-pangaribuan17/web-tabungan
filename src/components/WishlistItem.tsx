@@ -87,6 +87,9 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
     setSavedAmount(0);
     setIsResetDialogOpen(false);
     
+    // Dispatch an event to reset calendar and checklist
+    window.dispatchEvent(new CustomEvent('savingsReset'));
+    
     toast({
       title: "Tabungan Direset",
       description: "Tabunganmu telah direset menjadi 0.",

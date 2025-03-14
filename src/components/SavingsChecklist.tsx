@@ -59,10 +59,17 @@ const SavingsChecklist: React.FC = () => {
       setItems(prev => [newItem, ...prev]);
     };
     
+    // Listen for savings reset events
+    const handleSavingsReset = () => {
+      setItems([]);
+    };
+    
     window.addEventListener('savingsAdded', handleSavingsAdded as EventListener);
+    window.addEventListener('savingsReset', handleSavingsReset as EventListener);
     
     return () => {
       window.removeEventListener('savingsAdded', handleSavingsAdded as EventListener);
+      window.removeEventListener('savingsReset', handleSavingsReset as EventListener);
     };
   }, []);
 

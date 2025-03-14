@@ -57,10 +57,18 @@ const SavingsCalendar: React.FC = () => {
       setSelectedDate(newSaving.date);
     };
 
+    // Listen for savings reset events
+    const handleSavingsReset = () => {
+      setSavingsDays([]);
+      setSelectedDate(null);
+    };
+
     window.addEventListener('savingsAdded', handleSavingsAdded as EventListener);
+    window.addEventListener('savingsReset', handleSavingsReset as EventListener);
     
     return () => {
       window.removeEventListener('savingsAdded', handleSavingsAdded as EventListener);
+      window.removeEventListener('savingsReset', handleSavingsReset as EventListener);
     };
   }, [savingsDays]);
 

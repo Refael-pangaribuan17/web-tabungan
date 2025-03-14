@@ -6,13 +6,26 @@ import SavingsCalendar from '@/components/SavingsCalendar';
 import SavingsChecklist from '@/components/SavingsChecklist';
 import MotivationCard from '@/components/MotivationCard';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Plus, Moon, Sun } from 'lucide-react';
 import SetTargetForm from '@/components/SetTargetForm';
+
+interface WishlistItemData {
+  image: string;
+  name: string;
+  price: number;
+  saved: number;
+}
 
 const Index: React.FC = () => {
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentWishlistItem, setCurrentWishlistItem] = useState<WishlistItemData>({
+    image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=500&auto=format&fit=crop',
+    name: 'Laptop Baru',
+    price: 10000000,
+    saved: 2500000,
+  });
 
   const toggleDarkMode = () => {
     if (isDarkMode) {
@@ -21,6 +34,14 @@ const Index: React.FC = () => {
       document.documentElement.classList.add('dark');
     }
     setIsDarkMode(!isDarkMode);
+  };
+
+  const handleNewWishlistItem = (newItem: WishlistItemData) => {
+    setCurrentWishlistItem(newItem);
+    setIsNewItemDialogOpen(false);
+    
+    // Reset savings when adding a new wishlist
+    window.dispatchEvent(new CustomEvent('savingsReset'));
   };
 
   return (
@@ -50,7 +71,12 @@ const Index: React.FC = () => {
         </div>
 
         <div className="mb-6">
-          <WishlistItem />
+          <WishlistItem 
+            initialImage={currentWishlistItem.image}
+            initialName={currentWishlistItem.name}
+            initialPrice={currentWishlistItem.price}
+            initialSaved={currentWishlistItem.saved}
+          />
         </div>
         
         <div className="mb-6">
@@ -67,8 +93,11 @@ const Index: React.FC = () => {
         <DialogContent className="sm:max-w-md dark:bg-gray-900 dark:border-gray-800">
           <DialogHeader>
             <DialogTitle className="dark:text-white">Tambah Wishlist Baru</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Menambahkan wishlist baru akan menggantikan wishlist yang lama dan mereset tabungan.
+            </DialogDescription>
           </DialogHeader>
-          <SetTargetForm onClose={() => setIsNewItemDialogOpen(false)} />
+          <SetTargetForm onClose={() => setIsNewItemDialogOpen(false)} onSave={handleNewWishlistItem} />
         </DialogContent>
       </Dialog>
     </div>

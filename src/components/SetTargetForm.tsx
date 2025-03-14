@@ -11,8 +11,16 @@ import { format } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+interface WishlistItemData {
+  image: string;
+  name: string;
+  price: number;
+  saved: number;
+}
+
 interface SetTargetFormProps {
   onClose: () => void;
+  onSave?: (item: WishlistItemData) => void;
 }
 
 const categories = [
@@ -24,7 +32,7 @@ const categories = [
   { value: 'other', label: 'Lainnya' }
 ];
 
-const SetTargetForm: React.FC<SetTargetFormProps> = ({ onClose }) => {
+const SetTargetForm: React.FC<SetTargetFormProps> = ({ onClose, onSave }) => {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
@@ -56,7 +64,17 @@ const SetTargetForm: React.FC<SetTargetFormProps> = ({ onClose }) => {
       return;
     }
 
-    // Submit form logic would go here
+    const priceValue = parseInt(price);
+    
+    if (onSave) {
+      onSave({
+        image: imagePreview || 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=500&auto=format&fit=crop',
+        name: name,
+        price: priceValue,
+        saved: 0 // Start with 0 saved amount for new wishlist items
+      });
+    }
+    
     toast({
       title: "Target Berhasil Dibuat!",
       description: `${name} telah ditambahkan ke wishlist kamu.`,
