@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, List, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -43,6 +43,29 @@ const SavingsChecklist: React.FC = () => {
   const [newNote, setNewNote] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
 
+  useEffect(() => {
+    // Listen for savings added events
+    const handleSavingsAdded = (event: CustomEvent) => {
+      const { amount } = event.detail;
+      
+      const newItem: ChecklistItem = {
+        id: Date.now().toString(),
+        date: new Date(),
+        amount: amount,
+        note: 'Tabungan harian',
+        completed: true,
+      };
+      
+      setItems(prev => [newItem, ...prev]);
+    };
+    
+    window.addEventListener('savingsAdded', handleSavingsAdded as EventListener);
+    
+    return () => {
+      window.removeEventListener('savingsAdded', handleSavingsAdded as EventListener);
+    };
+  }, []);
+
   const toggleItemCompletion = (id: string) => {
     setItems(items.map(item => 
       item.id === id ? { ...item, completed: !item.completed } : item
@@ -67,10 +90,11 @@ const SavingsChecklist: React.FC = () => {
       return;
     }
 
+    const amount = parseInt(newAmount);
     const newItem: ChecklistItem = {
       id: Date.now().toString(),
       date: new Date(),
-      amount: parseInt(newAmount),
+      amount: amount,
       note: newNote || 'Tabungan harian',
       completed: true,
     };
@@ -80,24 +104,35 @@ const SavingsChecklist: React.FC = () => {
     setNewNote('');
     setIsAddingNew(false);
     
+    // Dispatch an event to update the calendar
+    const currentDate = new Date();
+    window.dispatchEvent(new CustomEvent('savingsAdded', {
+      detail: {
+        date: currentDate.getDate(),
+        month: currentDate.getMonth(),
+        year: currentDate.getFullYear(),
+        amount: amount
+      }
+    }));
+    
     toast({
       title: "Checklist Berhasil Ditambahkan!",
-      description: `Tabungan sebesar Rp ${parseInt(newAmount).toLocaleString('id-ID')} telah dicatat.`,
+      description: `Tabungan sebesar Rp ${amount.toLocaleString('id-ID')} telah dicatat.`,
     });
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full dark:bg-gray-900 dark:border-gray-800">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-medium flex items-center">
-          <List className="h-5 w-5 mr-2 text-wishlist-primary" />
+        <CardTitle className="text-lg font-medium flex items-center dark:text-white">
+          <List className="h-5 w-5 mr-2 text-wishlist-primary dark:text-purple-400" />
           Checklist Tabungan
         </CardTitle>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsAddingNew(!isAddingNew)}
-          className="text-wishlist-primary hover:text-wishlist-secondary hover:bg-wishlist-light"
+          className="text-wishlist-primary hover:text-wishlist-secondary hover:bg-wishlist-light dark:text-purple-400 dark:hover:bg-gray-800"
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           <span className="text-sm">Tambah</span>
@@ -105,9 +140,9 @@ const SavingsChecklist: React.FC = () => {
       </CardHeader>
       <CardContent>
         {isAddingNew && (
-          <div className="mb-4 p-4 bg-wishlist-light rounded-xl animate-scale-in">
+          <div className="mb-4 p-4 bg-wishlist-light dark:bg-gray-800 rounded-xl animate-scale-in">
             <div className="mb-3">
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                 Jumlah Tabungan (Rp)
               </label>
               <Input
@@ -115,11 +150,11 @@ const SavingsChecklist: React.FC = () => {
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
                 placeholder="50000"
-                className="w-full"
+                className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
             <div className="mb-3">
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                 Catatan (Opsional)
               </label>
               <Input
@@ -127,7 +162,7 @@ const SavingsChecklist: React.FC = () => {
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 placeholder="Hemat dari uang jajan"
-                className="w-full"
+                className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
             <div className="flex space-x-2">
@@ -140,7 +175,7 @@ const SavingsChecklist: React.FC = () => {
               <Button 
                 variant="outline" 
                 onClick={() => setIsAddingNew(false)}
-                className="flex-1"
+                className="flex-1 dark:bg-gray-700 dark:text-white dark:border-gray-600"
               >
                 Batal
               </Button>
@@ -153,8 +188,8 @@ const SavingsChecklist: React.FC = () => {
             <div 
               key={item.id} 
               className={cn(
-                "checklist-item group",
-                item.completed ? "border-l-4 border-wishlist-green" : "border-l-4 border-gray-200"
+                "checklist-item group dark:bg-gray-800",
+                item.completed ? "border-l-4 border-wishlist-green dark:border-green-500" : "border-l-4 border-gray-200"
               )}
             >
               <div
@@ -162,19 +197,19 @@ const SavingsChecklist: React.FC = () => {
                 onClick={() => toggleItemCompletion(item.id)}
               >
                 {item.completed ? (
-                  <CheckCircle2 className="h-5 w-5 text-wishlist-green" />
+                  <CheckCircle2 className="h-5 w-5 text-wishlist-green dark:text-green-500" />
                 ) : (
-                  <Circle className="h-5 w-5 text-gray-400 group-hover:text-wishlist-primary" />
+                  <Circle className="h-5 w-5 text-gray-400 group-hover:text-wishlist-primary dark:group-hover:text-purple-400" />
                 )}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-700">{formatDate(item.date)}</p>
-                <p className="text-xs text-gray-500 mt-1">{item.note}</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formatDate(item.date)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{item.note}</p>
               </div>
               <div className="text-right">
                 <p className={cn(
                   "font-bold",
-                  item.completed ? "text-wishlist-green" : "text-gray-400"
+                  item.completed ? "text-wishlist-green dark:text-green-500" : "text-gray-400"
                 )}>
                   Rp{item.amount.toLocaleString('id-ID')}
                 </p>

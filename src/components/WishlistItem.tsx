@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Sparkles, Upload, Plus } from 'lucide-react';
+import { Sparkles, Upload, Plus, RefreshCcw } from 'lucide-react';
 import CircularProgress from './CircularProgress';
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 // Example placeholder image
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=500&auto=format&fit=crop';
@@ -30,6 +31,13 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
   const [savedAmount, setSavedAmount] = useState(initialSaved);
   const [depositAmount, setDepositAmount] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  
+  // Get current date for saving to calendar
+  const currentDate = new Date();
+  const day = currentDate.getDate();
+  const month = currentDate.getMonth();
+  const year = currentDate.getFullYear();
 
   const handleAddSavings = () => {
     const amount = parseInt(depositAmount);
@@ -45,6 +53,16 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
     setSavedAmount(prev => prev + amount);
     setDepositAmount('');
     setIsDialogOpen(false);
+    
+    // Dispatch an event to update the calendar and checklist
+    window.dispatchEvent(new CustomEvent('savingsAdded', {
+      detail: {
+        date: day,
+        month: month,
+        year: year,
+        amount: amount
+      }
+    }));
     
     toast({
       title: "Tabungan Berhasil Ditambahkan!",
@@ -65,17 +83,27 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleResetSavings = () => {
+    setSavedAmount(0);
+    setIsResetDialogOpen(false);
+    
+    toast({
+      title: "Tabungan Direset",
+      description: "Tabunganmu telah direset menjadi 0.",
+    });
+  };
+
   return (
     <div className="wishlist-card p-4 relative">
       <div className="wave-background"></div>
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-wishlist-dark">{itemName}</h3>
+          <h3 className="text-xl font-bold text-wishlist-dark dark:text-white">{itemName}</h3>
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-wishlist-primary hover:text-wishlist-secondary hover:bg-wishlist-light"
+            className="text-wishlist-primary hover:text-wishlist-secondary hover:bg-wishlist-light dark:hover:bg-gray-800"
             onClick={() => {
               toast({
                 title: "Edit Item",
@@ -110,12 +138,22 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
           </div>
           
           <div className="flex flex-col items-center">
-            <CircularProgress value={savedAmount} max={itemPrice} />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500 mb-1">Tabungan saat ini</p>
-              <p className="text-lg font-bold text-wishlist-primary">
-                {formatCurrency(savedAmount)} <span className="text-gray-400 font-normal">dari</span> {formatCurrency(itemPrice)}
-              </p>
+            <CircularProgress value={savedAmount} max={itemPrice} animated={true} />
+            <div className="mt-4 text-center relative">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Tabungan saat ini</p>
+              <div className="flex items-center justify-center">
+                <p className="text-lg font-bold text-wishlist-primary">
+                  {formatCurrency(savedAmount)} <span className="text-gray-400 font-normal">dari</span> {formatCurrency(itemPrice)}
+                </p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsResetDialogOpen(true)}
+                  className="ml-2 text-gray-400 hover:text-red-500 dark:hover:bg-gray-800"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -126,13 +164,13 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
                   <span>Tambah Tabungan</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md dark:bg-gray-900 dark:border-gray-800">
                 <DialogHeader>
-                  <DialogTitle>Tambah Tabungan</DialogTitle>
+                  <DialogTitle className="dark:text-white">Tambah Tabungan</DialogTitle>
                 </DialogHeader>
                 <div className="p-4">
                   <div className="mb-4">
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                       Jumlah Tabungan (Rp)
                     </label>
                     <Input
@@ -140,7 +178,7 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
                       value={depositAmount}
                       onChange={(e) => setDepositAmount(e.target.value)}
                       placeholder="50000"
-                      className="w-full"
+                      className="w-full dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                     />
                   </div>
                   <Button 
@@ -152,6 +190,26 @@ const WishlistItem: React.FC<WishlistItemProps> = ({
                 </div>
               </DialogContent>
             </Dialog>
+            
+            <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+              <AlertDialogContent className="dark:bg-gray-900 dark:border-gray-800">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="dark:text-white">Reset Tabungan</AlertDialogTitle>
+                  <AlertDialogDescription className="dark:text-gray-400">
+                    Apakah kamu yakin ingin mereset tabungan? Tindakan ini tidak dapat dibatalkan.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">Batal</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleResetSavings}
+                    className="bg-red-500 text-white hover:bg-red-600"
+                  >
+                    Reset
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>

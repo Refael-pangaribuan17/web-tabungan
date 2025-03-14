@@ -100,15 +100,15 @@
   }
   
   .calendar-day.has-savings {
-    @apply before:absolute before:w-1.5 before:h-1.5 before:bg-wishlist-green before:rounded-full before:bottom-1;
+    @apply relative;
   }
 
   .wishlist-card {
-    @apply bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg;
+    @apply bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg dark:bg-gray-800 dark:shadow-xl;
   }
 
   .checklist-item {
-    @apply flex items-center p-4 bg-white rounded-xl shadow-sm mb-3 transition-all hover:shadow-md;
+    @apply flex items-center p-4 bg-white rounded-xl shadow-sm mb-3 transition-all hover:shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700;
   }
 
   .button-gradient {
@@ -126,4 +126,48 @@
     background-repeat: no-repeat;
     background-size: cover;
   }
+}
+
+/* Add new animations */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out forwards;
 }
