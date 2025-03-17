@@ -46,7 +46,7 @@ To run this project locally:
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/yourusername/web-tabungan.git
+    git clone https://github.com/Refael-pangaribuan17/web-tabungan.git
     ```
 
 2. **Navigate into the project directory**:
