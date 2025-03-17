@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { toast } from '@/hooks/use-toast';
+import { useWishlist } from '@/contexts/WishlistContext';
 
 interface ChecklistItem {
   id: string;
@@ -16,32 +17,26 @@ interface ChecklistItem {
 }
 
 const SavingsChecklist: React.FC = () => {
-  const [items, setItems] = useState<ChecklistItem[]>([
-    {
-      id: '1',
-      date: new Date(),
-      amount: 50000,
-      note: 'Hemat dari uang makan siang',
-      completed: true,
-    },
-    {
-      id: '2',
-      date: new Date(Date.now() - 86400000),
-      amount: 75000,
-      note: 'Bonus dari pekerjaan sampingan',
-      completed: true,
-    },
-    {
-      id: '3',
-      date: new Date(Date.now() - 172800000),
-      amount: 100000,
-      note: 'Tabungan mingguan',
-      completed: true,
-    },
-  ]);
+  const { currentWishlistId, addSavings } = useWishlist();
+  const [items, setItems] = useState<ChecklistItem[]>([]);
   const [newAmount, setNewAmount] = useState('');
   const [newNote, setNewNote] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [dailySavingAdded, setDailySavingAdded] = useState(false);
+
+  // Check if savings were already added today
+  useEffect(() => {
+    // Check for today's date
+    const today = new Date();
+    const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+    const hasSavedToday = localStorage.getItem(`dailySaving-${currentWishlistId}-${todayKey}`);
+    
+    if (hasSavedToday) {
+      setDailySavingAdded(true);
+    } else {
+      setDailySavingAdded(false);
+    }
+  }, [currentWishlistId]);
 
   useEffect(() => {
     // Listen for savings added events
@@ -57,21 +52,62 @@ const SavingsChecklist: React.FC = () => {
       };
       
       setItems(prev => [newItem, ...prev]);
+      
+      // Mark that savings were added today
+      const today = new Date();
+      const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+      localStorage.setItem(`dailySaving-${currentWishlistId}-${todayKey}`, 'true');
+      setDailySavingAdded(true);
     };
     
     // Listen for savings reset events
     const handleSavingsReset = () => {
       setItems([]);
+      setDailySavingAdded(false);
+    };
+    
+    // Listen for wishlist change events
+    const handleWishlistChange = () => {
+      // Check if savings were already added today for the new wishlist
+      const today = new Date();
+      const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+      const hasSavedToday = localStorage.getItem(`dailySaving-${currentWishlistId}-${todayKey}`);
+      
+      if (hasSavedToday) {
+        setDailySavingAdded(true);
+      } else {
+        setDailySavingAdded(false);
+      }
     };
     
     window.addEventListener('savingsAdded', handleSavingsAdded as EventListener);
     window.addEventListener('savingsReset', handleSavingsReset as EventListener);
+    window.addEventListener('wishlistChanged', handleWishlistChange as EventListener);
+    
+    // Load saved checklist items for this wishlist from localStorage
+    const savedItems = localStorage.getItem(`checklist-${currentWishlistId}`);
+    if (savedItems) {
+      // Convert date strings back to Date objects
+      const parsedItems = JSON.parse(savedItems).map((item: any) => ({
+        ...item,
+        date: new Date(item.date)
+      }));
+      setItems(parsedItems);
+    }
     
     return () => {
       window.removeEventListener('savingsAdded', handleSavingsAdded as EventListener);
       window.removeEventListener('savingsReset', handleSavingsReset as EventListener);
+      window.removeEventListener('wishlistChanged', handleWishlistChange as EventListener);
     };
-  }, []);
+  }, [currentWishlistId]);
+
+  // Save checklist items to localStorage when they change
+  useEffect(() => {
+    if (items.length > 0) {
+      localStorage.setItem(`checklist-${currentWishlistId}`, JSON.stringify(items));
+    }
+  }, [items, currentWishlistId]);
 
   const toggleItemCompletion = (id: string) => {
     setItems(items.map(item => 
@@ -88,6 +124,15 @@ const SavingsChecklist: React.FC = () => {
   };
 
   const handleAddItem = () => {
+    if (dailySavingAdded) {
+      toast({
+        title: "Batas Harian Tercapai",
+        description: "Kamu hanya dapat menambahkan tabungan sekali per hari.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!newAmount || parseInt(newAmount) <= 0) {
       toast({
         title: "Error",
@@ -107,20 +152,16 @@ const SavingsChecklist: React.FC = () => {
     };
 
     setItems([newItem, ...items]);
+    addSavings(currentWishlistId, amount);
     setNewAmount('');
     setNewNote('');
     setIsAddingNew(false);
     
-    // Dispatch an event to update the calendar
-    const currentDate = new Date();
-    window.dispatchEvent(new CustomEvent('savingsAdded', {
-      detail: {
-        date: currentDate.getDate(),
-        month: currentDate.getMonth(),
-        year: currentDate.getFullYear(),
-        amount: amount
-      }
-    }));
+    // Mark that savings were added today
+    const today = new Date();
+    const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+    localStorage.setItem(`dailySaving-${currentWishlistId}-${todayKey}`, 'true');
+    setDailySavingAdded(true);
     
     toast({
       title: "Checklist Berhasil Ditambahkan!",
@@ -139,7 +180,11 @@ const SavingsChecklist: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => setIsAddingNew(!isAddingNew)}
-          className="text-wishlist-primary hover:text-wishlist-secondary hover:bg-wishlist-light dark:text-purple-400 dark:hover:bg-gray-800"
+          disabled={dailySavingAdded}
+          className={cn(
+            "text-wishlist-primary hover:text-wishlist-secondary hover:bg-wishlist-light dark:text-purple-400 dark:hover:bg-gray-800",
+            dailySavingAdded && "opacity-50 cursor-not-allowed"
+          )}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           <span className="text-sm">Tambah</span>
@@ -162,7 +207,7 @@ const SavingsChecklist: React.FC = () => {
             </div>
             <div className="mb-3">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                Catatan (Opsional)
+                Catatan
               </label>
               <Input
                 type="text"
@@ -187,6 +232,15 @@ const SavingsChecklist: React.FC = () => {
                 Batal
               </Button>
             </div>
+          </div>
+        )}
+
+        {dailySavingAdded && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+            <p className="text-sm text-green-700 dark:text-green-400 flex items-center">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Kamu sudah menambahkan tabungan hari ini!
+            </p>
           </div>
         )}
 

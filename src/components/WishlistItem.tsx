@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Upload, Plus, RefreshCcw } from 'lucide-react';
 import CircularProgress from './CircularProgress';
 import { Button } from './ui/button';
@@ -20,6 +20,51 @@ const WishlistItem: React.FC = () => {
   const [depositAmount, setDepositAmount] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [dailySavingAdded, setDailySavingAdded] = useState(false);
+  
+  // Check if savings were already added today
+  useEffect(() => {
+    if (!currentWishlistId) return;
+    
+    // Check for today's date
+    const today = new Date();
+    const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+    const hasSavedToday = localStorage.getItem(`dailySaving-${currentWishlistId}-${todayKey}`);
+    
+    if (hasSavedToday) {
+      setDailySavingAdded(true);
+    } else {
+      setDailySavingAdded(false);
+    }
+  }, [currentWishlistId]);
+  
+  // Listen for wishlist change events
+  useEffect(() => {
+    const handleWishlistChange = () => {
+      if (!currentWishlistId) return;
+      
+      // Check if savings were already added today for the new wishlist
+      const today = new Date();
+      const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+      const hasSavedToday = localStorage.getItem(`dailySaving-${currentWishlistId}-${todayKey}`);
+      
+      if (hasSavedToday) {
+        setDailySavingAdded(true);
+      } else {
+        setDailySavingAdded(false);
+      }
+    };
+    
+    window.addEventListener('wishlistChanged', handleWishlistChange as EventListener);
+    window.addEventListener('savingsAdded', () => setDailySavingAdded(true) as EventListener);
+    window.addEventListener('savingsReset', () => setDailySavingAdded(false) as EventListener);
+    
+    return () => {
+      window.removeEventListener('wishlistChanged', handleWishlistChange as EventListener);
+      window.removeEventListener('savingsAdded', () => setDailySavingAdded(true) as EventListener);
+      window.removeEventListener('savingsReset', () => setDailySavingAdded(false) as EventListener);
+    };
+  }, [currentWishlistId]);
   
   if (!currentWishlist || !currentWishlistId) {
     return (
@@ -35,6 +80,15 @@ const WishlistItem: React.FC = () => {
   const { image, name, price, saved } = currentWishlist;
 
   const handleAddSavings = () => {
+    if (dailySavingAdded) {
+      toast({
+        title: "Batas Harian Tercapai",
+        description: "Kamu hanya dapat menambahkan tabungan sekali per hari.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const amount = parseInt(depositAmount);
     if (!amount || amount <= 0) {
       toast({
@@ -48,6 +102,12 @@ const WishlistItem: React.FC = () => {
     addSavings(currentWishlistId, amount);
     setDepositAmount('');
     setIsDialogOpen(false);
+    
+    // Mark that savings were added today
+    const today = new Date();
+    const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+    localStorage.setItem(`dailySaving-${currentWishlistId}-${todayKey}`, 'true');
+    setDailySavingAdded(true);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +126,12 @@ const WishlistItem: React.FC = () => {
   const handleResetSavings = () => {
     resetSavings(currentWishlistId);
     setIsResetDialogOpen(false);
+    setDailySavingAdded(false);
+    
+    // Clear the daily saving flag for this wishlist
+    const today = new Date();
+    const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+    localStorage.removeItem(`dailySaving-${currentWishlistId}-${todayKey}`);
   };
 
   return (
@@ -133,7 +199,20 @@ const WishlistItem: React.FC = () => {
             
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="mt-4 button-gradient group relative overflow-hidden">
+                <Button 
+                  className={`mt-4 button-gradient group relative overflow-hidden ${dailySavingAdded ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={dailySavingAdded}
+                  onClick={(e) => {
+                    if (dailySavingAdded) {
+                      e.preventDefault();
+                      toast({
+                        title: "Batas Harian Tercapai",
+                        description: "Kamu hanya dapat menambahkan tabungan sekali per hari.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
                   <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
                   <Plus className="h-4 w-4 mr-1" />
                   <span>Tambah Tabungan</span>
@@ -142,6 +221,9 @@ const WishlistItem: React.FC = () => {
               <DialogContent className="sm:max-w-md dark:bg-gray-900 dark:border-gray-800">
                 <DialogHeader>
                   <DialogTitle className="dark:text-white">Tambah Tabungan</DialogTitle>
+                  <DialogDescription className="dark:text-gray-400">
+                    Tambahkan jumlah tabungan yang ingin kamu simpan hari ini.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="p-4">
                   <div className="mb-4">

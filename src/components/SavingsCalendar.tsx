@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { cn } from '@/lib/utils';
+import { useWishlist } from '@/contexts/WishlistContext';
 
 interface SavingsDay {
   date: number;
@@ -20,23 +20,24 @@ const MONTHS = [
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 const SavingsCalendar: React.FC = () => {
+  const { currentWishlistId } = useWishlist();
   const currentDate = new Date();
   const [month, setMonth] = useState(currentDate.getMonth());
   const [year, setYear] = useState(currentDate.getFullYear());
   const [selectedDate, setSelectedDate] = useState<number | null>(currentDate.getDate());
-  const [savingsDays, setSavingsDays] = useState<SavingsDay[]>([
-    { date: 5, month: currentDate.getMonth(), year: currentDate.getFullYear(), amount: 50000 },
-    { date: 12, month: currentDate.getMonth(), year: currentDate.getFullYear(), amount: 100000 },
-    { date: 18, month: currentDate.getMonth(), year: currentDate.getFullYear(), amount: 75000 },
-    { date: 25, month: currentDate.getMonth(), year: currentDate.getFullYear(), amount: 200000 },
-  ]);
+  const [savingsDays, setSavingsDays] = useState<SavingsDay[]>([]);
 
   useEffect(() => {
-    // Listen for savings added events
+    const savedCalendarData = localStorage.getItem(`calendar-${currentWishlistId}`);
+    if (savedCalendarData) {
+      setSavingsDays(JSON.parse(savedCalendarData));
+    } else {
+      setSavingsDays([]);
+    }
+    
     const handleSavingsAdded = (event: CustomEvent<SavingsDay>) => {
       const newSaving = event.detail;
       
-      // Check if we already have a saving for this day
       const existingIndex = savingsDays.findIndex(day => 
         day.date === newSaving.date && 
         day.month === newSaving.month && 
@@ -44,23 +45,20 @@ const SavingsCalendar: React.FC = () => {
       );
       
       if (existingIndex >= 0) {
-        // Update existing saving
         const updatedSavings = [...savingsDays];
         updatedSavings[existingIndex].amount += newSaving.amount;
         setSavingsDays(updatedSavings);
       } else {
-        // Add new saving
         setSavingsDays(prev => [...prev, newSaving]);
       }
       
-      // Auto-select the date that was just updated
       setSelectedDate(newSaving.date);
     };
 
-    // Listen for savings reset events
     const handleSavingsReset = () => {
       setSavingsDays([]);
       setSelectedDate(null);
+      localStorage.removeItem(`calendar-${currentWishlistId}`);
     };
 
     window.addEventListener('savingsAdded', handleSavingsAdded as EventListener);
@@ -70,7 +68,13 @@ const SavingsCalendar: React.FC = () => {
       window.removeEventListener('savingsAdded', handleSavingsAdded as EventListener);
       window.removeEventListener('savingsReset', handleSavingsReset as EventListener);
     };
-  }, [savingsDays]);
+  }, [currentWishlistId, savingsDays]);
+
+  useEffect(() => {
+    if (savingsDays.length > 0) {
+      localStorage.setItem(`calendar-${currentWishlistId}`, JSON.stringify(savingsDays));
+    }
+  }, [savingsDays, currentWishlistId]);
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -118,12 +122,10 @@ const SavingsCalendar: React.FC = () => {
     const firstDay = getFirstDayOfMonth(month, year);
     const days = [];
 
-    // Empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(<div key={`empty-${i}`} className="calendar-day invisible"></div>);
     }
 
-    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const isToday = day === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear();
       const isSelected = day === selectedDate;

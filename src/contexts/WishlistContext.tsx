@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -35,13 +34,11 @@ export const useWishlist = () => {
 };
 
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize with items from localStorage or use default item
   const [wishlists, setWishlists] = useState<WishlistItemData[]>(() => {
     const savedWishlists = localStorage.getItem('wishlists');
     if (savedWishlists) {
       return JSON.parse(savedWishlists);
     }
-    // Default initial wishlist
     const defaultWishlist = {
       id: "default-wishlist",
       image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=500&auto=format&fit=crop',
@@ -59,12 +56,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return savedCurrentId || "default-wishlist";
   });
 
-  // Save wishlists to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('wishlists', JSON.stringify(wishlists));
   }, [wishlists]);
 
-  // Save current wishlist id to localStorage
   useEffect(() => {
     if (currentWishlistId) {
       localStorage.setItem('currentWishlistId', currentWishlistId);
@@ -82,8 +77,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setWishlists(prev => [...prev, newWishlist]);
     setCurrentWishlistId(newWishlist.id);
     
-    // Reset savings trackers
     window.dispatchEvent(new CustomEvent('savingsReset'));
+    window.dispatchEvent(new CustomEvent('wishlistChanged'));
     
     toast({
       title: "Wishlist Ditambahkan",
@@ -100,7 +95,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteWishlist = (id: string) => {
-    // Don't delete if it's the only wishlist
     if (wishlists.length <= 1) {
       toast({
         title: "Tidak Dapat Menghapus",
@@ -114,12 +108,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setWishlists(prev => prev.filter(item => item.id !== id));
     
-    // If the current wishlist is deleted, select another one
     if (currentWishlistId === id) {
       const newCurrent = wishlists.find(w => w.id !== id);
       if (newCurrent) {
         setCurrentWishlistId(newCurrent.id);
         window.dispatchEvent(new CustomEvent('savingsReset'));
+        window.dispatchEvent(new CustomEvent('wishlistChanged'));
       }
     }
 
@@ -136,8 +130,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     setCurrentWishlistId(id);
     
-    // Reset savings trackers when changing wishlist
     window.dispatchEvent(new CustomEvent('savingsReset'));
+    window.dispatchEvent(new CustomEvent('wishlistChanged'));
     
     const selected = wishlists.find(w => w.id === id);
     if (selected) {
@@ -159,7 +153,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       )
     );
     
-    // Reset savings trackers
     window.dispatchEvent(new CustomEvent('savingsReset'));
     
     toast({
@@ -173,7 +166,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       prev.map(item => {
         if (item.id === id) {
           const newSaved = item.saved + amount;
-          // Mark as completed if savings meet or exceed the price
           const completed = newSaved >= item.price;
           return { 
             ...item, 
@@ -185,13 +177,11 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       })
     );
     
-    // Get current date for saving to calendar
     const currentDate = new Date();
     const day = currentDate.getDate();
     const month = currentDate.getMonth();
     const year = currentDate.getFullYear();
     
-    // Dispatch event to update calendar and checklist
     window.dispatchEvent(new CustomEvent('savingsAdded', {
       detail: {
         date: day,
