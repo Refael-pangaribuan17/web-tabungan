@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -149,7 +150,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const resetSavings = (id: string) => {
     setWishlists(prev => 
       prev.map(item => 
-        item.id === id ? { ...item, saved: 0 } : item
+        item.id === id ? { ...item, saved: 0, completed: false } : item
       )
     );
     

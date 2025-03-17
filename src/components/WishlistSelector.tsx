@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { PlusCircle, Check, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { PlusCircle, Check, Trash2, ChevronDown, ChevronUp, PartyPopper } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { useWishlist, WishlistItemData } from '@/contexts/WishlistContext';
@@ -53,10 +53,6 @@ const WishlistSelector: React.FC = () => {
   // Determine if current wishlist is complete
   const isCurrentComplete = currentWishlist ? currentWishlist.saved >= currentWishlist.price : false;
   
-  // Only show completed wishlists in main display
-  const completedWishlists = wishlists.filter(w => w.completed);
-  const incompleteWishlists = wishlists.filter(w => !w.completed);
-  
   // Display wishlists based on toggle
   const displayWishlists = showAllWishlists ? wishlists : wishlists.slice(0, 5);
 
@@ -100,15 +96,16 @@ const WishlistSelector: React.FC = () => {
                 ? 'bg-green-50 dark:bg-green-900/20' 
                 : 'bg-white dark:bg-gray-800'
             }`}
+            onClick={() => wishlist.id !== currentWishlistId && selectWishlist(wishlist.id)}
           >
             {wishlist.id === currentWishlistId && (
-              <div className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs rounded-full px-2 py-1">
+              <div className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs rounded-full px-2 py-1 animate-pulse-subtle">
                 Aktif
               </div>
             )}
             {wishlist.completed && (
-              <div className="absolute -top-2 -left-2 bg-green-500 text-white rounded-full p-1">
-                <Check className="h-3 w-3" />
+              <div className="absolute -top-2 -left-2 bg-green-500 text-white rounded-full p-1 animate-bounce">
+                <PartyPopper className="h-3 w-3" />
               </div>
             )}
             
@@ -116,16 +113,20 @@ const WishlistSelector: React.FC = () => {
               <img 
                 src={wishlist.image} 
                 alt={wishlist.name} 
-                className="w-16 h-16 object-cover rounded-md"
+                className={`w-16 h-16 object-cover rounded-md ${wishlist.completed ? 'ring-2 ring-green-500 ring-offset-2' : ''}`}
               />
               <div className="flex-1 min-w-0">
                 <h4 className="font-medium text-sm dark:text-white truncate">{wishlist.name}</h4>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {formatCurrency(wishlist.saved)} / {formatCurrency(wishlist.price)}
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-1.5">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                   <div 
-                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500"
+                    className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                      wishlist.completed 
+                        ? 'bg-gradient-to-r from-green-500 to-green-400 animate-pulse-subtle' 
+                        : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                    }`}
                     style={{ width: `${Math.min(100, (wishlist.saved / wishlist.price) * 100)}%` }}
                   />
                 </div>
@@ -137,6 +138,7 @@ const WishlistSelector: React.FC = () => {
                     variant="ghost" 
                     size="sm" 
                     className="h-8 w-8 p-0 dark:text-gray-400 dark:hover:text-white"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <span className="sr-only">Open menu</span>
                     <ChevronDown className="h-4 w-4" />
@@ -145,14 +147,20 @@ const WishlistSelector: React.FC = () => {
                 <DropdownMenuContent align="end" className="dark:bg-gray-900 dark:border-gray-800">
                   {wishlist.id !== currentWishlistId && (
                     <DropdownMenuItem 
-                      onClick={() => selectWishlist(wishlist.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectWishlist(wishlist.id);
+                      }}
                       className="dark:hover:bg-gray-800 dark:text-gray-300"
                     >
                       Pilih Wishlist
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem 
-                    onClick={() => handleOpenDeleteDialog(wishlist.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDeleteDialog(wishlist.id);
+                    }}
                     className="text-red-500 dark:text-red-400 dark:hover:bg-gray-800"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -181,9 +189,9 @@ const WishlistSelector: React.FC = () => {
       
       {/* If current wishlist is complete, show notification */}
       {isCurrentComplete && (
-        <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800">
+        <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800 animate-scale-in">
           <div className="flex items-center">
-            <Check className="h-5 w-5 text-green-500 mr-2" />
+            <PartyPopper className="h-5 w-5 text-green-500 mr-2 animate-bounce" />
             <div className="flex-1">
               <p className="text-sm font-medium text-green-800 dark:text-green-300">
                 Selamat! Kamu telah mencapai target tabungan untuk {currentWishlist?.name}.
@@ -209,7 +217,7 @@ const WishlistSelector: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="dark:text-white">Tambah Wishlist Baru</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              Menambahkan wishlist baru akan menggantikan wishlist yang lama dan mereset tabungan.
+              Tambahkan wishlist baru tanpa menghapus wishlist yang sudah ada.
             </DialogDescription>
           </DialogHeader>
           <SetTargetForm onClose={() => setIsNewItemDialogOpen(false)} onSave={handleNewWishlistItem} />

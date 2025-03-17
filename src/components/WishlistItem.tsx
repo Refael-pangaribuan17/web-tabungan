@@ -21,6 +21,7 @@ const WishlistItem: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [dailySavingAdded, setDailySavingAdded] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   
   // Check if savings were already added today
   useEffect(() => {
@@ -36,7 +37,17 @@ const WishlistItem: React.FC = () => {
     } else {
       setDailySavingAdded(false);
     }
-  }, [currentWishlistId]);
+
+    // Check if target is met for celebration animation
+    if (currentWishlist && currentWishlist.saved >= currentWishlist.price) {
+      const celebrationShown = localStorage.getItem(`celebration-${currentWishlistId}`);
+      if (!celebrationShown) {
+        setShowCelebration(true);
+        localStorage.setItem(`celebration-${currentWishlistId}`, 'true');
+        setTimeout(() => setShowCelebration(false), 5000);
+      }
+    }
+  }, [currentWishlistId, currentWishlist]);
   
   // Listen for wishlist change events
   useEffect(() => {
@@ -54,15 +65,23 @@ const WishlistItem: React.FC = () => {
         setDailySavingAdded(false);
       }
     };
+
+    const handleSavingsAdded = () => {
+      setDailySavingAdded(true);
+    };
+
+    const handleSavingsReset = () => {
+      setDailySavingAdded(false);
+    };
     
-    window.addEventListener('wishlistChanged', handleWishlistChange as EventListener);
-    window.addEventListener('savingsAdded', () => setDailySavingAdded(true) as EventListener);
-    window.addEventListener('savingsReset', () => setDailySavingAdded(false) as EventListener);
+    window.addEventListener('wishlistChanged', handleWishlistChange);
+    window.addEventListener('savingsAdded', handleSavingsAdded);
+    window.addEventListener('savingsReset', handleSavingsReset);
     
     return () => {
-      window.removeEventListener('wishlistChanged', handleWishlistChange as EventListener);
-      window.removeEventListener('savingsAdded', () => setDailySavingAdded(true) as EventListener);
-      window.removeEventListener('savingsReset', () => setDailySavingAdded(false) as EventListener);
+      window.removeEventListener('wishlistChanged', handleWishlistChange);
+      window.removeEventListener('savingsAdded', handleSavingsAdded);
+      window.removeEventListener('savingsReset', handleSavingsReset);
     };
   }, [currentWishlistId]);
   
@@ -108,6 +127,12 @@ const WishlistItem: React.FC = () => {
     const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
     localStorage.setItem(`dailySaving-${currentWishlistId}-${todayKey}`, 'true');
     setDailySavingAdded(true);
+
+    // Check if target is reached after adding savings
+    if (saved + amount >= price) {
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 5000);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,11 +157,38 @@ const WishlistItem: React.FC = () => {
     const today = new Date();
     const todayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
     localStorage.removeItem(`dailySaving-${currentWishlistId}-${todayKey}`);
+    // Clear the celebration flag
+    localStorage.removeItem(`celebration-${currentWishlistId}`);
   };
 
   return (
-    <div className="wishlist-card p-4 relative">
+    <div className="wishlist-card p-4 relative overflow-hidden">
       <div className="wave-background"></div>
+      
+      {/* Celebration effects shown when target is reached */}
+      {showCelebration && (
+        <>
+          <div className="absolute inset-0 z-20 pointer-events-none">
+            <div className="absolute left-0 top-0 w-8 h-8 bg-yellow-500 rounded-full animate-confetti-1"></div>
+            <div className="absolute left-1/4 top-0 w-6 h-6 bg-purple-500 rounded-full animate-confetti-2"></div>
+            <div className="absolute left-2/4 top-0 w-10 h-10 bg-blue-500 rounded-full animate-confetti-3"></div>
+            <div className="absolute left-3/4 top-0 w-4 h-4 bg-green-500 rounded-full animate-confetti-1 animate-delay-100"></div>
+            <div className="absolute right-0 top-0 w-8 h-8 bg-pink-500 rounded-full animate-confetti-2 animate-delay-150"></div>
+            <div className="absolute left-10 top-0 w-5 h-5 bg-red-500 rounded-full animate-confetti-3 animate-delay-200"></div>
+            <div className="absolute left-1/3 top-0 w-7 h-7 bg-indigo-500 rounded-full animate-confetti-1 animate-delay-300"></div>
+            <div className="absolute right-1/3 top-0 w-9 h-9 bg-orange-500 rounded-full animate-confetti-2 animate-delay-400"></div>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/20 dark:to-purple-900/20 animate-pulse-celebration z-10 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 text-center animate-scale-celebration pointer-events-none">
+            <div className="text-4xl font-bold text-wishlist-accent dark:text-yellow-400 drop-shadow-lg animate-wiggle">
+              SELAMAT!
+            </div>
+            <div className="text-xl font-medium text-wishlist-primary dark:text-purple-300 mt-2 drop-shadow-md">
+              Target Tercapai!
+            </div>
+          </div>
+        </>
+      )}
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
